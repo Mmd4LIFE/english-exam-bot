@@ -103,16 +103,33 @@ async def on_timer_expired(context: ContextTypes.DEFAULT_TYPE) -> None:
             logger.info("Could not edit expired exam message: %s", exc)
 
 
+async def safe_answer(query, text: str | None = None, show_alert: bool = False) -> None:
+    """Acknowledge a callback query, tolerating an expired/old query id.
+
+    Telegram invalidates a callback query after ~15s. If a slow handler (e.g.
+    exam generation) delayed processing, the ack can fail with "query is too
+    old" — which is harmless and must not crash the handler.
+    """
+    try:
+        await query.answer(text=text, show_alert=show_alert)
+    except BadRequest as exc:
+        msg = str(exc).lower()
+        if "too old" not in msg and "invalid" not in msg and "not found" not in msg:
+            raise
+
+
 async def safe_edit(query, text: str, reply_markup=None) -> None:
-    """Edit a callback message, ignoring harmless 'not modified' errors."""
+    """Edit a callback message, ignoring harmless 'not modified'/old-query errors."""
     try:
         await query.edit_message_text(
             text=text, parse_mode="HTML", reply_markup=reply_markup,
             disable_web_page_preview=True,
         )
     except BadRequest as exc:
-        if "not modified" not in str(exc).lower():
-            raise
+        msg = str(exc).lower()
+        if "not modified" in msg or "too old" in msg or "invalid" in msg:
+            return
+        raise
 
 
 async def show_current_question(query, exam: ExamSession) -> None:

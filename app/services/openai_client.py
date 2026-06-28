@@ -1,13 +1,16 @@
 """OpenAI-backed generation of konkoor-style English exams.
 
-Produces a structured set of question *groups*. A group is either a set of
-standalone questions (grammar / vocabulary) or a passage (cloze / reading) with
-its questions. Every question has exactly four options and one correct index.
+The real konkoor (arshad) English section is entirely **reading
+comprehension**: several passages, each followed by exactly 5 questions. The
+generator mirrors that — it produces only passage groups (no standalone
+grammar/vocabulary items), each with exactly four options and one correct
+answer.
 """
 from __future__ import annotations
 
 import json
 import logging
+import math
 from dataclasses import dataclass
 
 from openai import AsyncOpenAI
@@ -15,6 +18,8 @@ from openai import AsyncOpenAI
 from app.config import get_settings
 
 logger = logging.getLogger(__name__)
+
+QUESTIONS_PER_PASSAGE = 5
 
 
 @dataclass
@@ -38,20 +43,18 @@ _EXAM_SCHEMA = {
     "type": "object",
     "additionalProperties": False,
     "properties": {
-        "groups": {
+        "passages": {
             "type": "array",
             "items": {
                 "type": "object",
                 "additionalProperties": False,
                 "properties": {
-                    "skill": {
-                        "type": "string",
-                        "enum": ["grammar", "vocabulary", "cloze", "reading"],
-                    },
-                    "passage_title": {"type": ["string", "null"]},
-                    "passage_body": {"type": ["string", "null"]},
+                    "title": {"type": "string"},
+                    "body": {"type": "string"},
                     "questions": {
                         "type": "array",
+                        "minItems": QUESTIONS_PER_PASSAGE,
+                        "maxItems": QUESTIONS_PER_PASSAGE,
                         "items": {
                             "type": "object",
                             "additionalProperties": False,
@@ -79,54 +82,50 @@ _EXAM_SCHEMA = {
                         },
                     },
                 },
-                "required": [
-                    "skill",
-                    "passage_title",
-                    "passage_body",
-                    "questions",
-                ],
+                "required": ["title", "body", "questions"],
             },
         }
     },
-    "required": ["groups"],
+    "required": ["passages"],
 }
 
 
 _SYSTEM_PROMPT = (
-    "You are an expert item-writer for the English section of the Iranian "
-    "national graduate entrance exam (konkoor karshenasi arshad). You write "
-    "academically rigorous, unambiguous multiple-choice English questions that "
-    "mirror that exam's style and difficulty."
+    "You are an expert item-writer for the English (reading comprehension) "
+    "section of the Iranian national graduate entrance exam (konkoor "
+    "karshenasi arshad). You write academically rigorous, unambiguous "
+    "passage-based multiple-choice questions that mirror that exam's style and "
+    "difficulty."
 )
 
 
-def _build_user_prompt(num_questions: int, examples: str | None) -> str:
-    blueprint = (
-        "Create a complete English exam with EXACTLY {n} questions total, "
-        "distributed to match the konkoor structure:\n"
-        "- ~6 standalone GRAMMAR questions (sentence-completion).\n"
-        "- ~6 standalone VOCABULARY questions (sentence-completion).\n"
-        "- one CLOZE passage (a short paragraph with numbered blanks) whose "
-        "questions test grammar/vocabulary in context.\n"
-        "- one or two READING passages (120-200 words each) followed by "
-        "comprehension questions.\n"
-        "Adjust the per-section counts so the TOTAL is exactly {n}.\n\n"
-        "Hard rules:\n"
-        "- Every question has EXACTLY four options.\n"
-        "- correct_index is 0-based (0..3) and points to the correct option.\n"
-        "- For standalone questions, passage_title and passage_body are null.\n"
-        "- For cloze/reading groups, fill passage_title and passage_body and "
-        "put the related questions in that group; in cloze stems refer to the "
-        "blanks (e.g. 'Blank (1) ...').\n"
+def _build_user_prompt(num_passages: int, examples: str | None) -> str:
+    prompt = (
+        f"Create a complete English reading-comprehension exam with EXACTLY "
+        f"{num_passages} passages. EVERY passage must have EXACTLY "
+        f"{QUESTIONS_PER_PASSAGE} questions (so {num_passages * QUESTIONS_PER_PASSAGE} "
+        f"questions in total).\n\n"
+        "Requirements:\n"
+        "- Each passage is an original academic/expository text of 130-220 words "
+        "on a varied topic (science, psychology, history, society, technology, "
+        "the arts).\n"
+        f"- Each passage is followed by EXACTLY {QUESTIONS_PER_PASSAGE} questions "
+        "covering a mix of: main idea/purpose, specific detail, vocabulary-in-"
+        "context, inference, and reference/tone.\n"
+        "- Do NOT write standalone grammar or vocabulary questions — every "
+        "question must be answerable from its passage.\n"
+        "- Every question has EXACTLY four options; correct_index is 0-based "
+        "(0..3).\n"
         "- Keep each explanation to one concise sentence.\n"
         "- Output must be valid against the provided JSON schema."
-    ).format(n=num_questions)
+    )
     if examples:
-        blueprint += (
-            "\n\nHere are real past questions for STYLE reference only — do not "
-            "copy them, generate fresh items in the same spirit:\n" + examples
+        prompt += (
+            "\n\nHere are real past konkoor questions for STYLE reference only — "
+            "do not copy them, generate fresh passages in the same spirit:\n"
+            + examples
         )
-    return blueprint
+    return prompt
 
 
 class ExamGenerator:
@@ -138,13 +137,14 @@ class ExamGenerator:
     async def generate(
         self, num_questions: int, style_examples: str | None = None
     ) -> list[GenGroup]:
+        num_passages = max(1, math.ceil(num_questions / QUESTIONS_PER_PASSAGE))
         resp = await self._client.chat.completions.create(
             model=self._model,
             messages=[
                 {"role": "system", "content": _SYSTEM_PROMPT},
                 {
                     "role": "user",
-                    "content": _build_user_prompt(num_questions, style_examples),
+                    "content": _build_user_prompt(num_passages, style_examples),
                 },
             ],
             response_format={
@@ -159,29 +159,29 @@ class ExamGenerator:
         )
         payload = json.loads(resp.choices[0].message.content or "{}")
         groups: list[GenGroup] = []
-        for g in payload.get("groups", []):
+        for p in payload.get("passages", []):
             questions = [
                 GenQuestion(
-                    skill=g["skill"],
+                    skill="reading",
                     stem=q["stem"],
                     options=q["options"],
                     correct_index=int(q["correct_index"]),
                     explanation=q.get("explanation", ""),
                 )
-                for q in g.get("questions", [])
+                for q in p.get("questions", [])
                 if len(q.get("options", [])) == 4
             ]
             if questions:
                 groups.append(
                     GenGroup(
-                        skill=g["skill"],
-                        passage_title=g.get("passage_title"),
-                        passage_body=g.get("passage_body"),
+                        skill="reading",
+                        passage_title=p.get("title"),
+                        passage_body=p.get("body"),
                         questions=questions,
                     )
                 )
         logger.info(
-            "Generated %d groups / %d questions",
+            "Generated %d passages / %d questions",
             len(groups),
             sum(len(g.questions) for g in groups),
         )

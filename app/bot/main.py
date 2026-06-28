@@ -119,14 +119,24 @@ async def _post_init(application: Application) -> None:
     await _index_rag()
 
 
+async def _on_error(update: object, context) -> None:
+    """Log unhandled handler errors instead of crashing the update loop."""
+    logger.error("Unhandled exception while processing update", exc_info=context.error)
+
+
 def build_application() -> Application:
     settings = get_settings()
     application = (
         ApplicationBuilder()
         .token(settings.telegram_bot_token)
         .post_init(_post_init)
+        # Process updates concurrently so a slow handler (e.g. AI exam
+        # generation, ~20-30s) does not block answering other callbacks and
+        # cause "query is too old" errors.
+        .concurrent_updates(True)
         .build()
     )
+    application.add_error_handler(_on_error)
 
     application.add_handler(CommandHandler("start", start.start_command))
     application.add_handler(CommandHandler("help", start.help_command))

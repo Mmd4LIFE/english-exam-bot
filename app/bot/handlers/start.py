@@ -5,7 +5,7 @@ from telegram import Update
 from telegram.ext import ContextTypes
 
 from app.bot import keyboards as kb
-from app.bot.handlers.common import db_session, ensure_user, safe_edit
+from app.bot.handlers.common import db_session, ensure_user, safe_answer, safe_edit
 from app.db import repositories as repo
 
 WELCOME = (
@@ -45,7 +45,7 @@ async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
 async def menu_router(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Route ``menu:*`` callbacks to the right feature."""
     query = update.callback_query
-    await query.answer()
+    await safe_answer(query)
     action = query.data.split(":", 1)[1]
 
     if action == "home":

@@ -5,14 +5,14 @@ from telegram import Update
 from telegram.ext import ContextTypes
 
 from app.bot import keyboards as kb
-from app.bot.handlers.common import db_session, safe_edit
+from app.bot.handlers.common import db_session, safe_answer, safe_edit
 from app.bot.render import render_result_summary, render_review_question
 from app.db import repositories as repo
 
 
 async def review_router(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     query = update.callback_query
-    await query.answer()
+    await safe_answer(query)
     parts = query.data.split(":")  # rev:open | rev:grid | rev:q:<pos>
     action = parts[1]
     user_id = update.effective_user.id

@@ -5,7 +5,7 @@ from telegram import Update
 from telegram.ext import ContextTypes
 
 from app.bot import keyboards as kb
-from app.bot.handlers.common import db_session, ensure_user
+from app.bot.handlers.common import db_session, ensure_user, safe_answer
 from app.db import repositories as repo
 from app.services import charts
 
@@ -52,7 +52,7 @@ async def show_stats(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None
     """From the inline menu (callback)."""
     query = update.callback_query
     if query:
-        await query.answer()
+        await safe_answer(query)
     await _send_stats(update.effective_chat, update.effective_user.id)
 
 

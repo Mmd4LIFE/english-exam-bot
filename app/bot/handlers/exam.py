@@ -10,6 +10,7 @@ from app.bot import keyboards as kb
 from app.bot.handlers.common import (
     cancel_timer,
     db_session,
+    safe_answer,
     safe_edit,
     schedule_timer,
     show_current_question,
@@ -63,7 +64,7 @@ async def prompt_source(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
 
 async def on_source(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     query = update.callback_query
-    await query.answer()
+    await safe_answer(query)
     source = query.data.split(":", 1)[1]
     context.user_data["new_source"] = source
 
@@ -84,7 +85,7 @@ async def on_source(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
 
 async def on_year(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     query = update.callback_query
-    await query.answer()
+    await safe_answer(query)
     raw = query.data.split(":", 1)[1]
     context.user_data["new_year"] = None if raw == "mixed" else int(raw)
     await safe_edit(query, "How many questions?", kb.count_menu())
@@ -92,7 +93,7 @@ async def on_year(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
 
 async def on_count(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     query = update.callback_query
-    await query.answer()
+    await safe_answer(query)
     context.user_data["new_count"] = int(query.data.split(":", 1)[1])
     await safe_edit(
         query,
@@ -105,7 +106,7 @@ async def on_count(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
 async def on_time(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Final step — build the exam and show question 1 in this same message."""
     query = update.callback_query
-    await query.answer()
+    await safe_answer(query)
     minutes = int(query.data.split(":", 1)[1])
     duration = minutes * 60
     user_id = update.effective_user.id
@@ -176,10 +177,10 @@ async def on_answer(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     async with db_session() as session:
         exam = await repo.get_active_session(session, user_id)
         if exam is None:
-            await query.answer("This exam is closed.", show_alert=False)
+            await safe_answer(query, "This exam is closed.", show_alert=False)
             return
         if await _expire_if_needed(query, context, session, exam):
-            await query.answer("⏰ Time is up!")
+            await safe_answer(query, "⏰ Time is up!")
             return
         await repo.record_answer(session, exam, exam.current_position, selected)
         # auto-advance to the next question ("remove" the answered one)
@@ -189,7 +190,7 @@ async def on_answer(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         exam = await repo.load_session(session, exam.id)
         text = render_question(exam)
         markup = kb.question_keyboard(exam, exam.current_position)
-    await query.answer("Saved ✓")
+    await safe_answer(query, "Saved ✓")
     await safe_edit(query, text, markup)
 
 
@@ -201,12 +202,12 @@ async def on_nav(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     async with db_session() as session:
         exam = await repo.get_active_session(session, user_id)
         if exam is None:
-            await query.answer("This exam is closed.", show_alert=False)
+            await safe_answer(query, "This exam is closed.", show_alert=False)
             return
 
         if action in ("back", "next", "resume", "jumpmenu"):
             if await _expire_if_needed(query, context, session, exam):
-                await query.answer("⏰ Time is up!")
+                await safe_answer(query, "⏰ Time is up!")
                 return
 
         if action == "back":
@@ -216,14 +217,14 @@ async def on_nav(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         elif action == "abandon":
             await repo.finalize_session(session, exam, expired=False)
             cancel_timer(context, exam.id)
-            await query.answer("Old exam abandoned.")
+            await safe_answer(query, "Old exam abandoned.")
             await safe_edit(
                 query, "📝 <b>New exam</b>\n\nChoose your question source:",
                 kb.source_menu(has_bank=bool(await repo.available_bank_years(session))),
             )
             return
         elif action == "jumpmenu":
-            await query.answer()
+            await safe_answer(query)
             await safe_edit(
                 query,
                 "🔢 <b>Jump to question</b>\n🔵 answered  ⚪ blank",
@@ -232,7 +233,7 @@ async def on_nav(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
             return
         elif action == "finish":
             answered = sum(1 for i in exam.items if i.selected_index is not None)
-            await query.answer()
+            await safe_answer(query)
             await safe_edit(
                 query,
                 "🏁 <b>Finish exam?</b>\n\nYou can still go back and keep answering.",
@@ -243,7 +244,7 @@ async def on_nav(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
             await repo.finalize_session(session, exam, expired=False)
             cancel_timer(context, exam.id)
             exam = await repo.load_session(session, exam.id)
-            await query.answer("Exam finished!")
+            await safe_answer(query, "Exam finished!")
             await safe_edit(
                 query, render_result_summary(exam), kb.review_open_keyboard(exam.id)
             )
@@ -254,7 +255,7 @@ async def on_nav(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         text = render_question(exam)
         markup = kb.question_keyboard(exam, exam.current_position)
 
-    await query.answer()
+    await safe_answer(query)
     await safe_edit(query, text, markup)
 
 
@@ -265,17 +266,17 @@ async def on_jump(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     async with db_session() as session:
         exam = await repo.get_active_session(session, user_id)
         if exam is None:
-            await query.answer("This exam is closed.")
+            await safe_answer(query, "This exam is closed.")
             return
         if await _expire_if_needed(query, context, session, exam):
-            await query.answer("⏰ Time is up!")
+            await safe_answer(query, "⏰ Time is up!")
             return
         exam.current_position = max(0, min(exam.num_questions - 1, pos))
         await session.flush()
         exam = await repo.load_session(session, exam.id)
         text = render_question(exam)
         markup = kb.question_keyboard(exam, exam.current_position)
-    await query.answer()
+    await safe_answer(query)
     await safe_edit(query, text, markup)
 
 
