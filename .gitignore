@@ -1,0 +1,30 @@
+# --- Secrets ---
+.env
+*.env
+!.env.example
+
+# --- Python ---
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+env/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# --- Source exam PDFs (large scanned images; not needed once seeded) ---
+exams/
+data/raw/
+data/ocr_cache/
+
+# --- Runtime / data ---
+*.log
+charts_tmp/
+*.sqlite3
+
+# --- OS / editors ---
+.DS_Store
+.idea/
+.vscode/

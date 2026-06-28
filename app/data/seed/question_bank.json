@@ -1,0 +1,117 @@
+{
+  "_comment": "Curated konkoor-style sample so the bot works out of the box. Run `make ingest` to OCR the real past-exam PDFs and regenerate this file with the full bank.",
+  "passages": [
+    {
+      "key": "sample-reading-1",
+      "source": "konkoor-sample",
+      "year": null,
+      "title": "Sleep and Memory",
+      "body": "For a long time, scientists believed that sleep was simply a period of rest during which the brain shut down. Recent research, however, has shown that the sleeping brain is remarkably active. During deep sleep, the brain replays the experiences of the day, strengthening the neural connections that store new information. This process, known as consolidation, is thought to be essential for turning short-term memories into long-term ones. Studies have found that students who sleep well after studying tend to remember more than those who stay awake. As a result, many researchers now argue that a good night's sleep is just as important for learning as the studying itself."
+    },
+    {
+      "key": "sample-cloze-1",
+      "source": "konkoor-sample",
+      "year": null,
+      "title": "Cloze: City Libraries",
+      "body": "Public libraries play an important role in modern cities. They provide free access to books and the internet, (1) ____ people who cannot afford their own computers. In addition, libraries often (2) ____ classes and events that bring the community together. Far from becoming outdated, they continue to (3) ____ to the changing needs of the people they serve."
+    }
+  ],
+  "questions": [
+    {
+      "source": "konkoor-sample", "year": null, "number": 1, "skill_type": "grammar",
+      "stem": "Hardly had she entered the room ____ the lights went out.",
+      "options": ["than", "when", "then", "that"],
+      "correct_index": 1,
+      "explanation": "\"Hardly ... when\" is the fixed correlative structure for an action interrupted by another.",
+      "passage_key": null
+    },
+    {
+      "source": "konkoor-sample", "year": null, "number": 2, "skill_type": "grammar",
+      "stem": "The committee insisted that the report ____ submitted before the deadline.",
+      "options": ["is", "was", "be", "will be"],
+      "correct_index": 2,
+      "explanation": "Verbs of demand like \"insist\" take the subjunctive base form \"be\".",
+      "passage_key": null
+    },
+    {
+      "source": "konkoor-sample", "year": null, "number": 3, "skill_type": "grammar",
+      "stem": "____ the heavy rain, the match was played as scheduled.",
+      "options": ["Despite", "Although", "However", "Because of"],
+      "correct_index": 0,
+      "explanation": "\"Despite\" + noun phrase shows contrast; the others need a clause or wrong meaning.",
+      "passage_key": null
+    },
+    {
+      "source": "konkoor-sample", "year": null, "number": 4, "skill_type": "vocabulary",
+      "stem": "The scientist's theory was so ____ that even experts found it hard to follow.",
+      "options": ["abstract", "concrete", "obvious", "trivial"],
+      "correct_index": 0,
+      "explanation": "\"Abstract\" (hard to grasp) fits the clue \"hard to follow\".",
+      "passage_key": null
+    },
+    {
+      "source": "konkoor-sample", "year": null, "number": 5, "skill_type": "vocabulary",
+      "stem": "After months of negotiation, the two sides finally reached a ____ that satisfied everyone.",
+      "options": ["conflict", "compromise", "dispute", "barrier"],
+      "correct_index": 1,
+      "explanation": "A \"compromise\" is a settlement that satisfies both sides.",
+      "passage_key": null
+    },
+    {
+      "source": "konkoor-sample", "year": null, "number": 6, "skill_type": "vocabulary",
+      "stem": "The new policy was designed to ____ the gap between rich and poor.",
+      "options": ["widen", "ignore", "narrow", "create"],
+      "correct_index": 2,
+      "explanation": "Policies aiming to help typically \"narrow\" (reduce) a gap.",
+      "passage_key": null
+    },
+    {
+      "source": "konkoor-sample", "year": null, "number": 7, "skill_type": "cloze",
+      "stem": "Blank (1): ... the internet, ____ people who cannot afford their own computers.",
+      "options": ["benefiting", "to benefit", "benefited", "benefit"],
+      "correct_index": 0,
+      "explanation": "A present participle \"benefiting\" introduces a reduced clause describing the result.",
+      "passage_key": "sample-cloze-1"
+    },
+    {
+      "source": "konkoor-sample", "year": null, "number": 8, "skill_type": "cloze",
+      "stem": "Blank (2): libraries often ____ classes and events ...",
+      "options": ["cancel", "host", "avoid", "forbid"],
+      "correct_index": 1,
+      "explanation": "Libraries \"host\" community classes and events.",
+      "passage_key": "sample-cloze-1"
+    },
+    {
+      "source": "konkoor-sample", "year": null, "number": 9, "skill_type": "cloze",
+      "stem": "Blank (3): they continue to ____ to the changing needs ...",
+      "options": ["adapt", "object", "refer", "belong"],
+      "correct_index": 0,
+      "explanation": "\"Adapt to\" means to adjust to changing needs.",
+      "passage_key": "sample-cloze-1"
+    },
+    {
+      "source": "konkoor-sample", "year": null, "number": 10, "skill_type": "reading",
+      "stem": "According to the passage, scientists once believed that during sleep the brain ____.",
+      "options": ["replayed daily experiences", "was completely inactive", "formed long-term memories", "strengthened connections"],
+      "correct_index": 1,
+      "explanation": "The passage says scientists believed sleep was a period when \"the brain shut down\".",
+      "passage_key": "sample-reading-1"
+    },
+    {
+      "source": "konkoor-sample", "year": null, "number": 11, "skill_type": "reading",
+      "stem": "The word \"consolidation\" in the passage refers to the process of ____.",
+      "options": ["resting the brain", "staying awake after studying", "turning short-term memories into long-term ones", "shutting down neural connections"],
+      "correct_index": 2,
+      "explanation": "The passage defines consolidation as turning short-term memories into long-term ones.",
+      "passage_key": "sample-reading-1"
+    },
+    {
+      "source": "konkoor-sample", "year": null, "number": 12, "skill_type": "reading",
+      "stem": "What can be inferred about students who sleep well after studying?",
+      "options": ["They study less effectively.", "They remember more than those who stay awake.", "They have weaker neural connections.", "They no longer need to study."],
+      "correct_index": 1,
+      "explanation": "The passage states such students \"tend to remember more than those who stay awake\".",
+      "passage_key": "sample-reading-1"
+    }
+  ]
+}

@@ -1,0 +1,15 @@
+.git
+.gitignore
+.venv
+venv
+__pycache__
+*.pyc
+.env
+exams/
+data/raw/
+data/ocr_cache/
+charts_tmp/
+*.log
+.idea
+.vscode
+README.md
