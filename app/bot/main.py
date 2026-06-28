@@ -74,6 +74,38 @@ async def _recover_sessions(application: Application) -> None:
     logger.info("Session recovery complete (%d in-progress checked)", len(rows))
 
 
+async def _index_rag() -> None:
+    """Embed the seeded question bank into Qdrant (idempotent, best-effort)."""
+    import asyncio
+
+    from sqlalchemy import select as _select
+
+    from app.db.models import Origin, Question
+    from app.services.rag import RagStore
+
+    try:
+        async with SessionFactory() as session:
+            rows = (
+                await session.execute(
+                    _select(Question).where(Question.origin == Origin.BANK)
+                )
+            ).scalars().all()
+            payload = [
+                {
+                    "id": q.id,
+                    "stem": q.stem,
+                    "options": q.options,
+                    "skill_type": q.skill_type,
+                    "year": q.year,
+                }
+                for q in rows
+            ]
+        if payload:
+            await asyncio.to_thread(RagStore().index_questions, payload)
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("RAG indexing on startup failed (non-fatal): %s", exc)
+
+
 async def _post_init(application: Application) -> None:
     await application.bot.set_my_commands(
         [
@@ -84,6 +116,7 @@ async def _post_init(application: Application) -> None:
         ]
     )
     await _recover_sessions(application)
+    await _index_rag()
 
 
 def build_application() -> Application:

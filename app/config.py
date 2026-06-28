@@ -19,6 +19,13 @@ class Settings(BaseSettings):
     openai_api_key: str = Field(..., alias="OPENAI_API_KEY")
     openai_gen_model: str = Field("gpt-4o", alias="OPENAI_GEN_MODEL")
     openai_ocr_model: str = Field("gpt-4o", alias="OPENAI_OCR_MODEL")
+    openai_embed_model: str = Field("text-embedding-3-small", alias="OPENAI_EMBED_MODEL")
+
+    # RAG / Qdrant — grounds AI exam generation in real past questions.
+    rag_enabled: bool = Field(True, alias="RAG_ENABLED")
+    qdrant_host: str = Field("qdrant", alias="QDRANT_HOST")
+    qdrant_port: int = Field(6333, alias="QDRANT_PORT")
+    qdrant_collection: str = Field("konkoor_questions", alias="QDRANT_COLLECTION")
 
     # Database
     postgres_user: str = Field("exambot", alias="POSTGRES_USER")

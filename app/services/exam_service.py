@@ -1,6 +1,7 @@
 """Build exam sessions from the question bank or via OpenAI generation."""
 from __future__ import annotations
 
+import asyncio
 import logging
 
 from sqlalchemy import select
@@ -15,8 +16,11 @@ from app.db.models import (
     SourceKind,
 )
 from app.services.openai_client import ExamGenerator, GenGroup
+from app.services.rag import RagStore
 
 logger = logging.getLogger(__name__)
+
+_rag = RagStore()
 
 
 async def _style_examples(session: AsyncSession, limit: int = 6) -> str | None:
@@ -71,11 +75,24 @@ async def _persist_generated(
     return ordered
 
 
+async def _rag_or_db_examples(session: AsyncSession) -> str | None:
+    """Prefer semantically-retrieved real questions (RAG); fall back to a DB sample."""
+    query = (
+        "konkoor English exam questions: grammar structure, vocabulary, "
+        "cloze, and reading comprehension"
+    )
+    examples = await asyncio.to_thread(_rag.search_examples, query, 8)
+    if examples:
+        logger.info("Grounding generation with %d RAG examples", len(examples))
+        return "\n".join(f"- {e}" for e in examples)
+    return await _style_examples(session)
+
+
 async def build_ai_session(
     session: AsyncSession, *, user_id: int, num_questions: int, duration_seconds: int
 ) -> ExamSession:
     generator = ExamGenerator()
-    examples = await _style_examples(session)
+    examples = await _rag_or_db_examples(session)
     groups = await generator.generate(num_questions, style_examples=examples)
     questions = await _persist_generated(session, groups)
     if not questions:

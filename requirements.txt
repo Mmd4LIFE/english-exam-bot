@@ -11,7 +11,11 @@ pydantic==2.9.2
 pydantic-settings==2.6.0
 
 # --- OpenAI (generation + vision OCR) ---
-openai==1.54.4
+openai==2.44.0
+httpx==0.28.1
+
+# --- RAG: vector store for grounding generation in real past questions ---
+qdrant-client==1.12.1
 
 # --- Visualization (score tracker) ---
 matplotlib==3.9.2

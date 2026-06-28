@@ -21,6 +21,7 @@ questions** OCR'd from previous years. It features a per-exam **timer**, full
 | 📊 **Score tracker** | Progress line chart, per-skill accuracy bars, and a result donut (matplotlib). |
 | 🗄 **Professional data model** | PostgreSQL + SQLAlchemy 2.0 + **Alembic** migrations. State is DB-backed, so restarts never lose an exam. |
 | 🌱 **Seeded on deploy** | The extracted question bank ships as a JSON artifact seeded by an Alembic **data migration** — `docker compose up` reproduces the full bank with no PDFs or API calls on the server. |
+| 🔎 **RAG grounding** | Real past questions are embedded into **Qdrant**; the AI generator retrieves the most similar ones as style exemplars, so generated exams track the real konkoor style. Degrades gracefully if Qdrant is down. |
 
 ---
 
@@ -33,9 +34,12 @@ docker compose up -d --build
 
 That's it. On startup the bot container:
 
-1. waits for PostgreSQL,
+1. waits for PostgreSQL **and Qdrant**,
 2. runs `alembic upgrade head` (creates the schema **and** seeds the question bank),
-3. starts polling Telegram.
+3. embeds the seeded question bank into Qdrant (idempotent — only on first run),
+4. starts polling Telegram.
+
+Services started by compose: **db** (PostgreSQL), **qdrant** (vector store), **bot**.
 
 Open Telegram, message your bot, and send `/start`.
 
@@ -57,7 +61,8 @@ app/
 │   └── repositories.py    # async data-access helpers
 ├── services/
 │   ├── openai_client.py   # OpenAI exam generation (structured output)
-│   ├── exam_service.py    # build a session from the bank or via AI
+│   ├── exam_service.py    # build a session from the bank or via AI (RAG-grounded)
+│   ├── rag.py             # Qdrant + embeddings: index bank, retrieve exemplars
 │   └── charts.py          # matplotlib score visualisations
 ├── bot/
 │   ├── main.py            # wiring, startup timer recovery, polling
@@ -142,6 +147,9 @@ make down         # stop
 | `OPENAI_API_KEY` | OpenAI key (generation + OCR) |
 | `OPENAI_GEN_MODEL` | model for exam generation (default `gpt-4o`) |
 | `OPENAI_OCR_MODEL` | vision model for OCR (default `gpt-4o`) |
+| `OPENAI_EMBED_MODEL` | embedding model for RAG (default `text-embedding-3-small`) |
+| `RAG_ENABLED` | toggle Qdrant grounding (default `true`) |
+| `QDRANT_HOST` / `QDRANT_PORT` / `QDRANT_COLLECTION` | vector store connection |
 | `POSTGRES_*` | database connection |
 | `DEFAULT_NUM_QUESTIONS` | default exam length |
 | `TIME_OPTIONS_MINUTES` | offered timer durations, e.g. `10,15,20,30` |

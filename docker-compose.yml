@@ -15,15 +15,29 @@ services:
       timeout: 5s
       retries: 10
 
+  qdrant:
+    image: qdrant/qdrant:v1.12.1
+    restart: unless-stopped
+    volumes:
+      - qdrantdata:/qdrant/storage
+    healthcheck:
+      test: ["CMD-SHELL", "bash -c ':> /dev/tcp/127.0.0.1/6333' || exit 1"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
   bot:
     build: .
     restart: unless-stopped
     env_file: .env
-    # The app talks to the db service on the compose network.
+    # The app talks to the db / qdrant services on the compose network.
     environment:
       POSTGRES_HOST: db
+      QDRANT_HOST: qdrant
     depends_on:
       db:
+        condition: service_healthy
+      qdrant:
         condition: service_healthy
     # Entrypoint waits for the DB, runs `alembic upgrade head` (schema + seed),
     # then starts the bot. So `docker compose up` is the only command needed.
@@ -31,3 +45,4 @@ services:
 
 volumes:
   pgdata:
+  qdrantdata:
